@@ -140,10 +140,20 @@ const HOST = "0.0.0.0"; // cho phép toàn mạng LAN truy cập
 const server = createServer(app);
 const io = setupSocket(server);
 
+(async () => {
+  try {
+    const [rows] = await pool.query("SELECT 1 + 1 AS result");
+    console.log("🟢 Test query OK:", rows[0]);
+  } catch (err) {
+    console.error("🔴 Database connection failed:", err);
+  }
+})();
+
 // Lưu io vào app để các controller có thể sử dụng
 app.set('io', io);
 
 server.listen(PORT, HOST, () => {
   console.log(`✅ SmartWasher API đang chạy tại http://${HOST}:${PORT}`);
 });
+
 
