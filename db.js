@@ -1,26 +1,16 @@
 import mysql from "mysql2/promise";
 import dotenv from "dotenv";
-dotenv.config();
-
-console.log("DB config (no password):", {
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  database: process.env.DB_NAME,
-  port: process.env.DB_PORT,
-});
+dotenv.config(); // Load biến môi trường từ .env
 
 const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  port: Number(process.env.DB_PORT),
+  host: process.env.DB_HOST || "localhost",
+  user: process.env.DB_USER || "root",
+  password: process.env.DB_PASSWORD || "123456",
+  database: process.env.DB_NAME || "smartwasher",
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  ssl: {
-    rejectUnauthorized: true,
-  },
+  port: process.env.DB_PORT || 3306
 });
 
 console.log("✅ MySQL pool created (smartwasher)");
