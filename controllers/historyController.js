@@ -18,9 +18,10 @@ export const HistoryController = {
         "h.user_id",
         "h.washer_id",
         "h.cost",
-        "DATE_FORMAT(h.requested_at, '%Y-%m-%d %H:%i') as requested_at",
-        "DATE_FORMAT(h.start_time, '%Y-%m-%d %H:%i') as start_time",
-        "DATE_FORMAT(h.end_time, '%Y-%m-%d %H:%i') as end_time",
+        // Return ISO-like UTC timestamps so clients parse as UTC (append Z)
+        "DATE_FORMAT(h.requested_at, '%Y-%m-%dT%H:%i:%sZ') as requested_at",
+        "DATE_FORMAT(h.start_time, '%Y-%m-%dT%H:%i:%sZ') as start_time",
+        "DATE_FORMAT(h.end_time, '%Y-%m-%dT%H:%i:%sZ') as end_time",
       ];
       if (hasStatus) selectCols.push("h.status");
       if (hasNotes) selectCols.push("h.notes");
@@ -99,11 +100,11 @@ export const HistoryController = {
 
         // 3. Cập nhật trạng thái lượt giặt
         await conn.execute(
-          `UPDATE wash_history 
-           SET status = 'refunded',
+            `UPDATE wash_history 
+             SET status = 'refunded',
                notes = 'Máy giặt gặp lỗi - Đã hoàn lại lượt giặt',
-               end_time = NOW()
-           WHERE id = ?`,
+               end_time = UTC_TIMESTAMP()
+             WHERE id = ?`,
           [lastWash.id]
         );
       } else {
@@ -190,7 +191,7 @@ export const HistoryController = {
           h.user_id,
           h.washer_id,
           w.name AS machineName,
-          DATE_FORMAT(h.requested_at, '%Y-%m-%d %H:%i') AS date,
+          DATE_FORMAT(h.requested_at, '%Y-%m-%dT%H:%i:%sZ') AS date,
           h.cost,
           CASE 
             WHEN h.status = 'refunded' THEN 'Hoàn tiền'
@@ -225,7 +226,7 @@ export const HistoryController = {
         await conn.beginTransaction();
 
         const [insRes] = await conn.execute(
-          `INSERT INTO wash_history (user_id, washer_id, cost, requested_at) VALUES (?, ?, ?, NOW())`,
+            `INSERT INTO wash_history (user_id, washer_id, cost, requested_at) VALUES (?, ?, ?, UTC_TIMESTAMP())`,
           [user_id, washer_id, cost ?? 0]
         );
 
