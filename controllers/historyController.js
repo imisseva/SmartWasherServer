@@ -18,10 +18,9 @@ export const HistoryController = {
         "h.user_id",
         "h.washer_id",
         "h.cost",
-        // Return ISO-like UTC timestamps so clients parse as UTC (append Z)
-        "DATE_FORMAT(h.requested_at, '%Y-%m-%dT%H:%i:%sZ') as requested_at",
-        "DATE_FORMAT(h.start_time, '%Y-%m-%dT%H:%i:%sZ') as start_time",
-        "DATE_FORMAT(h.end_time, '%Y-%m-%dT%H:%i:%sZ') as end_time",
+        "DATE_FORMAT(h.requested_at, '%Y-%m-%d %H:%i') as requested_at",
+        "DATE_FORMAT(h.start_time, '%Y-%m-%d %H:%i') as start_time",
+        "DATE_FORMAT(h.end_time, '%Y-%m-%d %H:%i') as end_time",
       ];
       if (hasStatus) selectCols.push("h.status");
       if (hasNotes) selectCols.push("h.notes");
@@ -100,11 +99,11 @@ export const HistoryController = {
 
         // 3. Cập nhật trạng thái lượt giặt
         await conn.execute(
-            `UPDATE wash_history 
-             SET status = 'refunded',
+          `UPDATE wash_history 
+           SET status = 'refunded',
                notes = 'Máy giặt gặp lỗi - Đã hoàn lại lượt giặt',
-               end_time = UTC_TIMESTAMP()
-             WHERE id = ?`,
+               end_time = NOW()
+           WHERE id = ?`,
           [lastWash.id]
         );
       } else {
@@ -191,7 +190,7 @@ export const HistoryController = {
           h.user_id,
           h.washer_id,
           w.name AS machineName,
-          DATE_FORMAT(h.requested_at, '%Y-%m-%dT%H:%i:%sZ') AS date,
+          DATE_FORMAT(h.requested_at, '%Y-%m-%d %H:%i') AS date,
           h.cost,
           CASE 
             WHEN h.status = 'refunded' THEN 'Hoàn tiền'
@@ -213,6 +212,64 @@ export const HistoryController = {
       res.status(500).json({ success: false, message: "Lỗi server" });
     }
   },
+
+  async getMonthlyWashStats(req, res) {
+    const { year, month } = req.params;
+    try {
+      const sql = `
+        SELECT 
+          u.id AS user_id,
+          a.username,
+          u.name,
+          COUNT(CASE WHEN h.cost IS NULL OR h.cost = 0 THEN 1 END) AS free_washes,
+          COUNT(CASE WHEN h.cost > 0 THEN 1 END) AS paid_washes,
+          COUNT(*) AS total_washes
+        FROM user u
+        JOIN account a ON a.id = u.account_id
+        LEFT JOIN wash_history h ON h.user_id = u.id 
+          AND YEAR(h.requested_at) = ? 
+          AND MONTH(h.requested_at) = ?
+        GROUP BY u.id, a.username, u.name
+        ORDER BY total_washes DESC, a.username ASC
+      `;
+      const [rows] = await db.execute(sql, [year, month]);
+
+      res.json({ success: true, data: rows });
+    } catch (err) {
+      console.error("❌ Lỗi truy vấn thống kê lượt giặt tháng:", err);
+      res.status(500).json({ success: false, message: "Lỗi server" });
+    }
+  },
+
+  async getMonthlyRevenue(req, res) {
+    const { year, month } = req.params;
+    try {
+      const sql = `
+        SELECT 
+          u.id AS user_id,
+          a.username,
+          u.name,
+          SUM(CASE WHEN h.cost > 0 THEN h.cost ELSE 0 END) AS total_revenue
+        FROM user u
+        JOIN account a ON a.id = u.account_id
+        LEFT JOIN wash_history h ON h.user_id = u.id 
+          AND YEAR(h.requested_at) = ? 
+          AND MONTH(h.requested_at) = ?
+        GROUP BY u.id, a.username, u.name
+        HAVING total_revenue > 0
+        ORDER BY total_revenue DESC, a.username ASC
+      `;
+      const [rows] = await db.execute(sql, [year, month]);
+
+      // Tính tổng doanh thu
+      const totalRevenue = rows.reduce((sum, row) => sum + parseFloat(row.total_revenue || 0), 0);
+
+      res.json({ success: true, totalRevenue, data: rows });
+    } catch (err) {
+      console.error("❌ Lỗi truy vấn doanh thu tháng:", err);
+      res.status(500).json({ success: false, message: "Lỗi server" });
+    }
+  },
   async createWashHistory(req, res) {
     try {
       const { user_id, washer_id, cost } = req.body;
@@ -226,7 +283,7 @@ export const HistoryController = {
         await conn.beginTransaction();
 
         const [insRes] = await conn.execute(
-            `INSERT INTO wash_history (user_id, washer_id, cost, requested_at) VALUES (?, ?, ?, UTC_TIMESTAMP())`,
+          `INSERT INTO wash_history (user_id, washer_id, cost, requested_at) VALUES (?, ?, ?, NOW())`,
           [user_id, washer_id, cost ?? 0]
         );
 
