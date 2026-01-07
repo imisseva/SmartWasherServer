@@ -9,6 +9,8 @@ import washerRoutes from "./routes/washerRoutes.js";
 import { register } from "./controllers/authController.js";
 import userWasherRoutes from "./routes/userWasherRoutes.js";
 import washerInfoRoutes from "./routes/washerInfoRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
+import revenueRoutes from "./routes/revenueRoutes.js";
 import * as cron from 'node-cron';
 import { resetWeeklyFreeWashes } from "./models/User.js";
 import jwt from "jsonwebtoken";
@@ -28,9 +30,15 @@ app.use("/api/admin/users", userRoutes);
 app.use("/api/washers", washerRoutes); // ✅ chỉ giữ 1 route chính
 app.use("/api/washer", userWasherRoutes);
 app.use("/api/washers", washerInfoRoutes); // API mới để lấy thông tin máy giặt
+app.use("/api/payments", paymentRoutes);
+app.use("/api/revenue", revenueRoutes);
 
 app.get("/", (req, res) => {
   res.send("✅ SmartWasher API đang chạy");
+});
+
+app.get("/api/test", (req, res) => {
+  res.json({ message: "✅ Server hoạt động bình thường 🚀" });
 });
 
 // Test endpoint: force emit washerRefunded (useful for debugging sockets)
@@ -82,8 +90,7 @@ app.post('/api/test/reset-washes', verifyToken, requireAdmin, async (req, res) =
 });
 
 // ✅ Compatibility: cũ
-app.post("/api/wash-history", HistoryController.createWashHistory);
-app.post("/api/register", register);
+app.post("/api/wash-history", HistoryController.createWashHistory);app.get("/api/admin/wash-history", HistoryController.getAdminWashHistory);app.post("/api/register", register);
 
 // Cron job chạy vào 00:00 mỗi thứ 2 (ngày thứ 1 trong tuần)
 cron.schedule("0 0 * * 1", async () => {
