@@ -23,7 +23,7 @@ app.use(express.json());
 
 // ✅ Mount routes chuẩn
 app.use("/api", authRoutes);
-app.use("/api/wash-history", historyRoutes);  // Đổi URL để khớp với client
+app.use("/api/history", historyRoutes);  // Đổi URL để khớp với client
 app.use("/api/admin/users", userRoutes);
 app.use("/api/washers", washerRoutes); // ✅ chỉ giữ 1 route chính
 app.use("/api/washer", userWasherRoutes);
@@ -82,7 +82,7 @@ app.post('/api/test/reset-washes', verifyToken, requireAdmin, async (req, res) =
 });
 
 // ✅ Compatibility: cũ
-app.post("/api/wash-history", HistoryController.createWashHistory);
+app.post("/api/history", HistoryController.createWashHistory);
 app.post("/api/register", register);
 
 // Cron job chạy vào 00:00 mỗi thứ 2 (ngày thứ 1 trong tuần)
