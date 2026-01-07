@@ -10,7 +10,7 @@ export async function getHistoryByUserId(userId) {
       h.user_id,
       h.washer_id,
       w.name AS machineName,
-      DATE_FORMAT(h.requested_at, '%Y-%m-%dT%H:%i:%sZ') AS date,
+      DATE_FORMAT(h.requested_at, '%Y-%m-%d %H:%i') AS date,
       h.cost,
       CASE 
         WHEN h.cost = 0 THEN 'Miễn phí'
