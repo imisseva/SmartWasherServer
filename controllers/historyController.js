@@ -341,23 +341,6 @@ export const HistoryController = {
       return res.status(500).json({ success: false, message: "Lỗi server" });
     }
   },
-
-  async getAdminWashHistory(req, res) {
-    try {
-      const sql = `
-        SELECT wh.id, u.name AS user_name, w.name AS washer_name, wh.cost, wh.requested_at
-        FROM wash_history wh
-        JOIN user u ON wh.user_id = u.id
-        JOIN washer w ON wh.washer_id = w.id
-        ORDER BY wh.requested_at DESC
-      `;
-      const [results] = await db.execute(sql);
-      res.json({ success: true, data: results });
-    } catch (err) {
-      console.error("❌ Lỗi truy vấn admin wash history:", err);
-      res.status(500).json({ success: false, message: "Lỗi server" });
-    }
-  },
   // duplicate/refactor placeholder - refundWashForError implemented above; no-op here
 };
 
